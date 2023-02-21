@@ -47,12 +47,7 @@ def postdetail(request, pk):
         comments = Comment.objects.filter(post=post).all()
 
         return render(request, template_name, {'post':post,'comments': comments,'is_liked':comment_dict.items(), 'likes_count':com_likes.items(),'user':request.user.id})
-    cf = CommentForm()
 
-    context = {
-        'comment_form': cf,
-    }
-    return render(request, 'blog/post/post_detail.html', context)
 
 class PostListView(LoginRequiredMixin, ListView):
     context_object_name = 'posts'

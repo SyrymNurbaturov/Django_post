@@ -11,34 +11,34 @@
             <div class="card-body">
                 <h2>{{ comments.count }} comments</h2>
                 <div>
-
-
                 </div>
-                {% for comment in comments %}
-                    {% for key, value in is_liked %}
-                        {% for count_comment_id, count_comment_value in likes_count %}
-                            <div class="comments" style="padding: 10px;">
-                                <p class="font-weight-bold">
-                                    {{ comment.user }}
-                                    <span class=" text-muted font-weight-normal">
-              {{ comment.timestamp }}
-            </span>
-                                </p>
-                                {{ comment.content | linebreaks }}
-                            </div>
-                            <form method="POST" action="{% url 'blog:likes' comment.id %}">
-                                {% csrf_token %}
-                            {{ count_comment_value }}
-                                {% if value == True %}
-                                    <button type="submit" name="post_id" value="{{ object.id }}"
-                                            class="btn btn-danger">DisLike
-                                    </button>
-                                {% else %}
-                                    <button type="submit" name="post_id" value="{{ object.id }}"
-                                            class="btn btn-primary">like
-                                    </button>
-                                {% endif %}
-                            </form>
+                {% for key, value in is_liked %}
+                    {% for count_comment_id, count_comment_value in likes_count %}
+                        {% for comment in comments %}
+                            {% if key == comment.id and count_comment_id == comment.id %}
+                                <div class="comments" style="padding: 10px;">
+                                    <p class="font-weight-bold">
+                                        {{ comment.user }}
+                                        <span class=" text-muted font-weight-normal">
+                                          {{ comment.timestamp }}
+                                        </span>
+                                    </p>
+                                    {{ comment.content | linebreaks }}
+                                </div>
+                                <form method="POST" action="{% url 'blog:likes' comment.id %}">
+                                    {% csrf_token %}
+                                    {{ count_comment_value }}
+                                    {% if value == True %}
+                                        <button type="submit" name="post_id" value="{{ object.id }}"
+                                                class="btn btn-danger">DisLike
+                                        </button>
+                                    {% else %}
+                                        <button type="submit" name="post_id" value="{{ object.id }}"
+                                                class="btn btn-primary">like
+                                        </button>
+                                    {% endif %}
+                                </form>
+                            {% endif %}
                         {% endfor %}
                     {% endfor %}
                 {% endfor %}
