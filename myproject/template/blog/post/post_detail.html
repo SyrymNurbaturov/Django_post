@@ -1,0 +1,71 @@
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 card mb-4  mt-3 left  top">
+            <div class="card-body">
+                <p class=" text-muted">{{ post.author }} {{ post.publish }}</p>
+                <p class="card-text ">{{ post.body }}</p>
+            </div>
+        </div>
+
+        <div class="col-md-8 card mb-4  mt-3 ">
+            <div class="card-body">
+                <h2>{{ comments.count }} comments</h2>
+                <div>
+                </div>
+                {% for key, value in is_liked %}
+                    {% for count_comment_id, count_comment_value in likes_count %}
+                        {% for comment in comments %}
+                            {% if key == comment.id and count_comment_id == comment.id %}
+                                <div class="comments" style="padding: 10px;">
+                                    <p class="font-weight-bold">
+                                        {{ comment.user }}
+                                        <span class=" text-muted font-weight-normal">
+                                          {{ comment.timestamp }}
+                                        </span>
+                                    </p>
+                                    {{ comment.content | linebreaks }}
+                                </div>
+                                <form method="POST" action="{% url 'blog:likes' comment.id %}">
+                                    {% csrf_token %}
+                                    {{ count_comment_value }}
+                                    {% if value == True %}
+                                        <button type="submit" name="post_id" value="{{ object.id }}"
+                                                class="btn btn-danger">DisLike
+                                        </button>
+                                    {% else %}
+                                        <button type="submit" name="post_id" value="{{ object.id }}"
+                                                class="btn btn-primary">like
+                                        </button>
+                                    {% endif %}
+                                </form>
+                            {% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                {% endfor %}
+            </div>
+        </div>
+        <div class="col-md-8 card mb-4  mt-3 ">
+            <div class="card-body">
+                {% if new_comment %}
+
+                    <div class="alert alert-success" role="alert">
+                        Your comment is awaiting moderation
+                    </div>
+                {% else %}
+                    <h3>Leave a comment</h3>
+                    <form method="post" style="margin-top: 1.3em;">
+                        {{ comment_form.as_p }}
+
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-primary  btn-lg">Submit</button>
+
+                    </form>
+                    <a class="btn btn-success btn-sm mt-1 mb-1"
+                       href="{% url 'blog:post_list' %}">
+                        <button>Back</button>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
