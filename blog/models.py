@@ -2,6 +2,12 @@ from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
 from django.urls import reverse
+
+# class User()
+
+# class User(models.Model):
+#     pass
+
 class Post(models.Model):
     STATUS_CHOICES = (
         ('draft', 'Draft'),
@@ -35,3 +41,4 @@ class Comment(models.Model):
     likes=models.ManyToManyField(User,related_name='likes',blank=True)
     def likecount(self):
         return self.likes.count()
+

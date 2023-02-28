@@ -2,14 +2,29 @@ from django.shortcuts import redirect,render, get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin
 from rest_framework.permissions import *
 from django.views.generic import *
+from rest_framework.generics import CreateAPIView
 from django.contrib.auth.views import *
 from django.contrib.auth.decorators import login_required
 from .forms import *
-from django.contrib.auth import logout, login
-from django.contrib.auth import get_user_model
-from django.contrib.contenttypes.models import ContentType
+from django.contrib.auth import logout, login, get_user_model
+from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
+from rest_framework.views import APIView
+from .serializers import *
+from rest_framework.response import Response
+from django.views.generic import *
+from rest_framework.request import Request
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.authentication import BasicAuthentication
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework import status
+from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
+
 User = get_user_model()
-from django.http import HttpResponse,HttpResponseRedirect
+
+class RegisterUserView(CreateAPIView):
+    model = get_user_model()
+    permission_classes = [AllowAny,]
+    serializer_class = UserSerializer
 
 def postdetail(request, pk):
     post = Post.objects.get(id=pk)
@@ -52,16 +67,12 @@ def postdetail(request, pk):
 class PostListView(LoginRequiredMixin, ListView):
     context_object_name = 'posts'
     template_name = 'blog/post/list.html'
-    paginate_by = 3
-
+    paginate_by = 10
     login_url = '/blog/login/'
     permission_classes = (IsAuthenticated,)
     def get_queryset(self):
         posts = Post.objects.all()
-
         return posts
-#Dislike
-# def postdislike(request, pk):
 
 #Like
 def postlike(request, pk):
@@ -79,9 +90,21 @@ def postlike(request, pk):
 
         return redirect('/blog/')
 
-def logout_user(request):
-    logout(request)
-    return redirect('/blog/login')
+
+class LogoutView(APIView):
+    permission_classes = (AllowAny,)
+
+    def post(self, request, *args, **kwargs):
+        if self.request.data.get('all'):
+            token: OutstandingToken
+            for token in OutstandingToken.objects.filter(user=request.user):
+                _, _ = BlacklistedToken.objects.get_or_create(token=token)
+            return Response({"status": "OK, goodbye, all refresh tokens blacklisted"})
+        refresh_token = self.request.data.get('refresh_token')
+        token = RefreshToken(token=refresh_token)
+        token.blacklist()
+        return Response({"status": "OK, goodbye"})
+
 
 class RegisterView(CreateView):
     template_name = 'registration/registration.html'
@@ -96,3 +119,135 @@ class LoginView(LoginRequiredMixin, LoginView):
     template_name = 'registration/login.html/'
     redirect_field_name = '/blog/'
 
+
+# API
+# LoginRequiredMixin,
+class IndexPostAPI(APIView, LimitOffsetPagination):
+    # login_url = '/blog/login/'
+    def get(self, request):
+        p = Post.objects.all()
+        paginator = PageNumberPagination()
+        paginator.page_size = 10
+        paginator.page_query_param = 'page_size'
+        paginator.max_page_size = 100
+        result = paginator.paginate_queryset(p, request)
+        serializer = PostSerializer(result, many=True)
+        return Response(serializer.data)
+
+class OnePostAPI(APIView):
+    login_url = 'blog/login'
+    def get(self, request, *args, **kwargs):
+        pk = self.kwargs.get("pk", None)
+        try:
+            p = Post.objects.get(pk=pk)
+        except:
+            return Response({"error": "Method not exist"})
+        else:
+            serializer = PostSerializer(p)
+            return Response(serializer.data)
+
+
+class IndexCommentAPI(LoginRequiredMixin,APIView, LimitOffsetPagination):
+    login_url = '/blog/login/'
+    def get(self, request):
+        c = Comment.objects.all()
+        paginator = PageNumberPagination()
+        paginator.page_size = 3
+        paginator.page_query_param = 'page_size'
+        paginator.max_page_size = 100
+        result = paginator.paginate_queryset(c, request)
+        serializer = CommentSerializer(result, many=True)
+        return Response(serializer.data)
+
+
+class AddPostView(LoginRequiredMixin,APIView):
+    login_url = '/blog/login/'
+    def post(self, request):
+        permission_classes = (IsAdminUser, )
+        serializers = PostSerializer(data=request.data)
+        serializers.is_valid(raise_exception=True)
+        serializers.save()
+
+class UpdatePostView(LoginRequiredMixin,APIView):
+    login_url = '/polls/login/'
+    def put(self, request,*args, **kwargs):
+        permission_classes = (IsAdminUser,)
+        pk = self.kwargs.get("pk", None)
+        if not pk:
+            return Response({"error":"Method not allowed"})
+        try:
+            instance = Post.objects.get(pk=pk)
+        except:
+            return Response({"error": "Method not exist"})
+        else:
+            serializers = PostSerializer(data=request.data, instance=instance)
+            serializers.is_valid(raise_exception=True)
+            serializers.save()
+            return Response(serializers.data)
+
+class DeletePostView(LoginRequiredMixin,APIView):
+    login_url = '/polls/login/'
+    def delete(self, request, *args,**kwargs):
+        permission_classes = (IsAdminUser,)
+        pk = self.kwargs.get("pk", None)
+        if not pk:
+            return Response({"error":"Method not allowed"})
+        try:
+            instance = Post.objects.get(pk=pk)
+        except:
+            return Response({"error": "Method not exist"})
+        else:
+            serializers = PostSerializer(instance)
+            instance.delete()
+            return Response(serializers.data)
+
+class AddCommentView(LoginRequiredMixin,APIView):
+    login_url = '/blog/login/'
+    def post(self, request):
+        permission_classes = (IsAdminUser, )
+        serializers = CommentSerializer(data=request.data)
+        serializers.is_valid(raise_exception=True)
+        serializers.save()
+
+class UpdateCommentView(LoginRequiredMixin,APIView):
+    login_url = '/polls/login/'
+    def put(self, request,*args, **kwargs):
+        permission_classes = (IsAdminUser,)
+        pk = self.kwargs.get("pk", None)
+        if not pk:
+            return Response({"error":"Method not allowed"})
+        try:
+            instance = Comment.objects.get(pk=pk)
+        except:
+            return Response({"error": "Method not exist"})
+        else:
+            serializers = CommentSerializer(data=request.data, instance=instance)
+            serializers.is_valid(raise_exception=True)
+            serializers.save()
+            return Response(serializers.data)
+
+class DeleteCommentView(LoginRequiredMixin,APIView):
+    login_url = '/polls/login/'
+    def delete(self, request, *args,**kwargs):
+        permission_classes = (IsAdminUser,)
+        pk = self.kwargs.get("pk", None)
+        if not pk:
+            return Response({"error":"Method not allowed"})
+        try:
+            instance = Comment.objects.get(pk=pk)
+        except:
+            return Response({"error": "Method not exist"})
+        else:
+            serializers = CommentSerializer(instance)
+            instance.delete()
+
+            return Response(serializers.data)
+
+
+@api_view()
+@permission_classes([IsAuthenticated])
+@authentication_classes([BasicAuthentication])
+def user(request: Request):
+    return Response({
+        'data': UserSerializer(request.user).data
+    })

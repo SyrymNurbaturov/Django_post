@@ -9,6 +9,7 @@ class RegisterUserForm(UserCreationForm):
     class Meta:
         model = User
         fields = ('username', 'password')
+
 from .models import *
 class CommentForm(forms.ModelForm):
     content = forms.CharField(label="", widget=forms.Textarea(

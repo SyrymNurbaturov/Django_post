@@ -26,9 +26,9 @@
                 {% endif %}
             </span>
             <br>
-            <a href="{% url 'blog:logout' %}">
-                <button>Выйти</button>
-            </a>
+            <form action="{% url 'blog:logout' %}" method="post">
+                <button type="submit">Выйти</button>
+            </form>
         </div>
     {% endif %}
 </div>

@@ -167,8 +167,7 @@
         </div>
         <div class="form-class">
             <form method="post">
-                {% csrf_token %}
-
+            {% csrf_token %}
                 <div class="form-error">{{ form.non_field_errors }}</div>
 
                 {% for f in form %}
