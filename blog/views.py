@@ -2,7 +2,7 @@ from django.shortcuts import redirect,render, get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin
 from rest_framework.permissions import *
 from django.views.generic import *
-from rest_framework.generics import CreateAPIView
+from rest_framework.generics import CreateAPIView, UpdateAPIView, RetrieveAPIView
 from django.contrib.auth.views import *
 from django.contrib.auth.decorators import login_required
 from .forms import *
@@ -16,7 +16,6 @@ from rest_framework.request import Request
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.authentication import BasicAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework import status
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 
 User = get_user_model()
@@ -105,6 +104,10 @@ class LogoutView(APIView):
         token.blacklist()
         return Response({"status": "OK, goodbye"})
 
+class UpdateProfileView(UpdateAPIView):
+    queryset = User.objects.all()
+    permission_classes = (IsAuthenticated,)
+    serializer_class = UpdateUserSerializer
 
 class RegisterView(CreateView):
     template_name = 'registration/registration.html'
@@ -122,6 +125,8 @@ class LoginView(LoginRequiredMixin, LoginView):
 
 # API
 # LoginRequiredMixin,
+
+
 class IndexPostAPI(APIView, LimitOffsetPagination):
     # login_url = '/blog/login/'
     def get(self, request):
@@ -159,17 +164,14 @@ class IndexCommentAPI(LoginRequiredMixin,APIView, LimitOffsetPagination):
         serializer = CommentSerializer(result, many=True)
         return Response(serializer.data)
 
+class AddPostView(CreateAPIView):
+    model = Post
+    permission_classes = [AllowAny, ]
+    serializer_class = PostSerializer
+    http_method_names = ['post', ]
 
-class AddPostView(LoginRequiredMixin,APIView):
-    login_url = '/blog/login/'
-    def post(self, request):
-        permission_classes = (IsAdminUser, )
-        serializers = PostSerializer(data=request.data)
-        serializers.is_valid(raise_exception=True)
-        serializers.save()
 
 class UpdatePostView(LoginRequiredMixin,APIView):
-    login_url = '/polls/login/'
     def put(self, request,*args, **kwargs):
         permission_classes = (IsAdminUser,)
         pk = self.kwargs.get("pk", None)
@@ -186,7 +188,6 @@ class UpdatePostView(LoginRequiredMixin,APIView):
             return Response(serializers.data)
 
 class DeletePostView(LoginRequiredMixin,APIView):
-    login_url = '/polls/login/'
     def delete(self, request, *args,**kwargs):
         permission_classes = (IsAdminUser,)
         pk = self.kwargs.get("pk", None)
@@ -243,6 +244,17 @@ class DeleteCommentView(LoginRequiredMixin,APIView):
 
             return Response(serializers.data)
 
+
+class CurrentUserView(APIView):
+    def get(self, request, *args, **kwargs):
+        username = self.kwargs.get("username", None)
+        try:
+            u = User.objects.get(username=username)
+        except:
+            return Response({"error": "Method not exist"})
+        else:
+            serializer = UserSerializer(u)
+            return Response(serializer.data)
 
 @api_view()
 @permission_classes([IsAuthenticated])
